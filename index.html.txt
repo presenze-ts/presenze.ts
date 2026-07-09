@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calendario Presenze</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    max-width:1200px;
+    margin:20px auto;
+    padding:20px;
+}
+
+h1{
+    margin-top:0;
+}
+
+.top{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+    align-items:center;
+}
+
+.stats{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:10px;
+    margin-bottom:20px;
+}
+
+.card{
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:12px;
+}
+
+.calendar{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+}
+
+.h,.d{
+    border:1px solid #ccc;
+    padding:12px;
+    text-align:center;
+}
+
+.h{
+    font-weight:bold;
+    background:#f5f5f5;
+}
+
+.d{
+    cursor:pointer;
+}
+
+.empty{
+    border:none;
+}
+
+.weekend{
+    background:#d9d9d9;
+    color:#666;
+}
+
+.sw{
+    background:#ffffff;
+}
+
+.presence{
+    background:#57bb8a;
+}
+
+.holiday{
+    background:#ffe599;
+}
+
+.ok{
+    color:green;
+    font-weight:bold;
+}
+
+.quasi{
+    color:orange;
+    font-weight:bold;
+}
+
+.legend{
+    display:flex;
+    gap:25px;
+    margin-top:20px;
+    margin-bottom:15px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+.legend-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:bold;
+}
+
+.legend-box{
+    width:20px;
+    height:20px;
+    border:1px solid #999;
+}
+
+.legend-presence{
+    background:#57bb8a;
+}
+
+.legend-holiday{
+    background:#ffe599;
+}
+
+.legend-sw{
+    background:#ffffff;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Calendario Presenze</h1>
+
+<div class="top">
+
+<select id="month"></select>
+
+<input id="year" type="number" value="2026">
+
+<label>
+% Presenza
+<input id="percTargetPresenza"
+type="number"
+min="0"
+max="100"
+style="width:70px;">
+</label>
+
+<label>
+% Smart
+<input id="percTargetSmart"
+type="number"
+min="0"
+max="100"
+style="width:70px;">
+</label>
+
+</div>
+
+<div class="stats">
+
+<div class="card">
+Lavorativi: <span id="lav">0</span>
+</div>
+
+<div class="card">
+Ferie / Sede Chiusa: <span id="ferie">0</span>
+</div>
+
+<div class="card">
+Presenza: <span id="pres">0</span>
+</div>
+
+<div class="card">
+Smart Working: <span id="sw">0</span>
+</div>
+
+<div class="card">
+% Presenza: <span id="percPres">0%</span>
+</div>
+
+<div class="card">
+% Smart Working: <span id="percSW">0%</span>
+</div>
+
+<div class="card">
+Presenze minime richieste:
+<span id="minimo">0</span>
+</div>
+
+<div class="card">
+Target Presenza:
+<span id="targetMostrato">40%</span>
+</div>
+
+<div class="card">
+Presenze mancanti:
+<span id="mancanti">0</span>
+</div>
+
+<div class="card">
+Stato:
+<span id="stato">-</span>
+</div>
+
+</div>
+
+<div id="cal" class="calendar"></div>
+
+<div class="legend">
+
+<div class="legend-item">
+<div class="legend-box legend-presence"></div>
+Presenza
+</div>
+
+<div class="legend-item">
+<div class="legend-box legend-holiday"></div>
+Ferie / Sede Chiusa
+</div>
+
+<div class="legend-item">
+<div class="legend-box legend-sw"></div>
+Smart Working
+</div>
+
+</div>
+
+<p>
+Clic sui giorni lavorativi:
+Bianco → Presenza → Ferie/Sede Chiusa → Bianco
+</p>
+
+<script>
+
+const month = document.getElementById('month');
+const year = document.getElementById('year');
+const cal = document.getElementById('cal');
+
+const mesi = [
+'Gennaio','Febbraio','Marzo','Aprile',
+'Maggio','Giugno','Luglio','Agosto',
+'Settembre','Ottobre','Novembre','Dicembre'
+];
+
+month.innerHTML = mesi.map((m,i)=>
+`<option value="${i}">${m}</option>`
+).join('');
+
+month.value = new Date().getMonth();
+
+const targetSalvato =
+localStorage.getItem('targetPresenza');
+
+if(targetSalvato){
+
+document.getElementById('percTargetPresenza').value =
+targetSalvato;
+
+document.getElementById('percTargetSmart').value =
+100 - Number(targetSalvato);
+
+}
+else{
+
+document.getElementById('percTargetPresenza').value = 40;
+document.getElementById('percTargetSmart').value = 60;
+
+}
+
+function key(){
+return 'presenze_'+year.value+'_'+month.value;
+}
+
+function load(){
+return JSON.parse(
+localStorage.getItem(key()) || '{}'
+);
+}
+
+function save(d){
+localStorage.setItem(
+key(),
+JSON.stringify(d)
+);
+}
+
+function draw(){
+
+let y=+year.value;
+let m=+month.value;
+
+let data=load();
+
+cal.innerHTML='';
+
+['Lun','Mar','Mer','Gio','Ven','Sab','Dom']
+.forEach(x=>{
+cal.innerHTML += `<div class="h">${x}</div>`;
+});
+
+let first=new Date(y,m,1);
+let offset=(first.getDay()+6)%7;
+
+for(let i=0;i<offset;i++){
+cal.innerHTML += '<div class="empty"></div>';
+}
+
+let giorni = new Date(y,m+1,0).getDate();
+
+let lavorativi=0;
+let presenza=0;
+let ferie=0;
+
+for(let g=1;g<=giorni;g++){
+
+let dt=new Date(y,m,g);
+let wd=dt.getDay();
+
+let e=document.createElement('div');
+
+e.className='d';
+e.textContent=g;
+
+if(wd===0 || wd===6){
+
+e.classList.add('weekend');
+
+}else{
+
+lavorativi++;
+
+let stato=data[g] || 'sw';
+
+if(stato==='presence') presenza++;
+if(stato==='holiday') ferie++;
+
+e.classList.add(stato);
+
+e.onclick=()=>{
+
+let n=data[g] || 'sw';
+
+n =
+n==='sw'
+?'presence'
+:n==='presence'
+?'holiday'
+:'sw';
+
+data[g]=n;
+
+save(data);
+
+draw();
+
+};
+
+}
+
+cal.appendChild(e);
+
+}
+
+let eff=lavorativi-ferie;
+
+let smartWorking=eff-presenza;
+
+let percP=eff
+? (presenza/eff)*100
+: 0;
+
+let percSW=eff
+? (smartWorking/eff)*100
+: 0;
+
+let targetPresenza =
+Number(
+document.getElementById('percTargetPresenza').value
+);
+
+let min =
+Math.ceil(
+eff * (targetPresenza/100)
+);
+
+let manc =
+Math.max(
+0,
+min-presenza
+);
+
+document.getElementById('lav').textContent=lavorativi;
+document.getElementById('ferie').textContent=ferie;
+document.getElementById('pres').textContent=presenza;
+document.getElementById('sw').textContent=smartWorking;
+
+document.getElementById('percPres').textContent=
+percP.toFixed(2)+'%';
+
+document.getElementById('percSW').textContent=
+percSW.toFixed(2)+'%';
+
+document.getElementById('minimo').textContent=min;
+
+document.getElementById('targetMostrato').textContent=
+targetPresenza+'%';
+
+document.getElementById('mancanti').textContent=manc;
+
+let stato=document.getElementById('stato');
+
+if(percP >= targetPresenza){
+
+stato.textContent='✅ IN REGOLA';
+stato.className='ok';
+
+}
+else if(percP >= 36 && percP < 40){
+
+stato.textContent=
+`🟠 QUASI IN REGOLA (${percP.toFixed(2)}%)`;
+
+stato.className='quasi';
+
+}
+else{
+
+stato.textContent=
+`${percP.toFixed(2)}%`;
+
+stato.className='';
+
+}
+
+}
+
+month.onchange=draw;
+year.onchange=draw;
+
+percTargetPresenza.onchange=function(){
+
+percTargetSmart.value=
+100-Number(this.value);
+
+localStorage.setItem(
+'targetPresenza',
+this.value
+);
+
+draw();
+
+};
+
+percTargetSmart.onchange=function(){
+
+percTargetPresenza.value=
+100-Number(this.value);
+
+localStorage.setItem(
+'targetPresenza',
+percTargetPresenza.value
+);
+
+draw();
+
+};
+
+draw();
+
+</script>
+
+</body>
+</html>
