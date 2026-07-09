@@ -411,16 +411,26 @@ let stato=document.getElementById('stato');
 
 if(percP >= targetPresenza){
 
-stato.textContent='✅ IN REGOLA';
-stato.className='ok';
+    stato.textContent =
+        `✅ IN REGOLA (${percP.toFixed(2)}%)`;
+
+    stato.className = 'ok';
 
 }
 else if(percP >= 36 && percP < 40){
 
-stato.textContent=
-`🟠 QUASI IN REGOLA (${percP.toFixed(2)}%)`;
+    stato.textContent =
+        `🟠 QUASI IN REGOLA (${percP.toFixed(2)}%)`;
 
-stato.className='quasi';
+    stato.className = 'quasi';
+
+}
+else{
+
+    stato.textContent =
+        `❌ NON IN REGOLA (${percP.toFixed(2)}%)`;
+
+    stato.className = 'ko';
 
 }
 else{
