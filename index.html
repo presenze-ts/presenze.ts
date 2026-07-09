@@ -426,7 +426,10 @@ stato.className='quasi';
     
 else{
 
-stato.textContent=4    `❌ NON IN REGOLA (${percP.toFixed(2)}%)`;5 6    stato.className='ko';
+    stato.textContent=
+    `${percP.toFixed(2)}%`;
+
+    stato.className='NON IN REGOLA';
 
 }
 
