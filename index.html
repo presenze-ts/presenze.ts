@@ -418,7 +418,11 @@ stato.textContent='✅ IN REGOLA';
 stato.className='ok';
 
 }
-else if(percP >= 36 && percP < 40){
+else if(
+    percP >= (targetPresenza - 4)
+    &&
+    percP < targetPresenza
+){
 
 stato.textContent=
 `🟠 QUASI IN REGOLA (${percP.toFixed(2)}%)`;
